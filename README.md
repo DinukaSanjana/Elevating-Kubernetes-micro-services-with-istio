@@ -1,121 +1,185 @@
-# Project : Elevating Kubernetes Micro-services with Istio
+# Project: Elevating Kubernetes Micro-services with Istio
 
-## Repo URL
+## Repository
 https://github.com/DinukaSanjana/microservices-demo.git
 
-## Background Concepts
+<!--
+## Problem Fixing References
+- https://gemini.google.com/share/4b9c80f17000  
+- https://chatgpt.com/share/69099c4f-8fb4-800a-8c21-0a4057e88d88  
+- https://gemini.google.com/share/6c89bde39e4f
+-->
 
-### Microservices
-- Product Catalog Service
-- Cart Service
-- Payment Service
-- Shipping Service
+## What are Microservices?
+Small, independent services that each perform a single business function and communicate over APIs.
 
-Uses Google Cloud e-commerce application with 10 microservices.
+### E-commerce Website: Monolith vs Microservices Architecture
+| Monolith Architecture                               | Microservices Architecture                                      |
+|-----------------------------------------------------|-----------------------------------------------------------------|
+| Entire app in one codebase                          | App split into many small, independent services                |
+| One failure can crash the whole site                | One service failure doesn’t affect others                      |
+| Hard to scale individual parts                      | Scale only the services that need it                           |
+| Deployment takes longer                             | Faster, independent deployments                                 |
 
-### Kubernetes
-- Container Orchestration system.
+Highest count of microservices cannot be managed manually → Need automation and orchestration → Kubernetes + Istio.
 
-#### Parts of Kubernetes
-- Container
-- Pod
-- Node: Uses AWS Elastic Kubernetes Service (EKS) with 3-node cluster.
-- Cluster
-- Service
-- Deployment: Uses kubernetes-manifests.yaml.
-
-## Istio
-Service Mesh.
-
-### How Istio Works (Sidecar Proxy)
-1. Label namespace: istio-injection=enabled.
-2. Application Pod gets sidecar proxy.
-3. Pods show READY 2/2.
-4. Traffic through sidecar proxy.
-
-Features:
-- Collect metrics.
-- Encrypt traffic for security.
-- Traffic management.
-
-Focus on Observability.
-
-## Project Steps
-
-### Step 1: Environment Setup
-- Kubernetes Cluster: AWS EKS with 3 worker nodes.
-- Management Machine: EC2 instance.
-- Tools: aws-cli, kubectl.
-- Configure kubectl for cluster access.
-
-### Step 2: Deploy Microservices
-- Clone repo from GitHub.
-- kubectl apply -f kubernetes-manifests.yaml.
-- Test via frontend Load Balancer IP.
-
-### Step 3: Istio Setup
-- Download Istio.
-- istioctl install.
-- Label default namespace: istio-injection=enabled.
-
-### Verify Injection
-- Pods restart and show 2/2.
-
-### Step 4: Istio Add-ons for Observability
-Add-ons: Kiali, Prometheus, Grafana, Jaeger.
-
-### Prometheus
-- Monitoring system.
-- Metrics Scraper: Collects requests per second, latency, CPU usage.
-
-### Grafana
-- Data visualization.
-- Dashboards: Graphs, gauges.
-- Pre-configured: Istio Mesh Dashboard, Service Dashboard.
-
-## Summary
-- Problem: Complex management of microservices.
-- Solution: Kubernetes foundation, Istio for communication management, security, observability.
-- Result: Insights without code changes, optimize system.
-
-Elevating Kubernetes Micro-services with Istio: A Journey into Enhanced Observability.
-
-This project showcases how Istio enhances Kubernetes microservices by improving security, routing, and observability. We demonstrate Istio's capabilities using an application, highlighting its benefits for managing microservices with better scalability and visibility. The setup includes installing Istio and deploying the application with observability tools like Kiali, Jaeger, Prometheus, and Grafana.
-
-## Istio Architecture
-
-### 1. Data Plane
-- Sidecar Proxies.
-- Istio injects Envoy proxy container into application pod.
-- Application service traffic through proxy.
-- Proxies send data to Control Plane.
-
-### 2. Control Plane
-- Manages and configures sidecar proxies.
-- Components: Pilot, Galley, Citadel.
-
-## Repo Structure
-- microservices-demo/src/ ⇒ all the services
-- microservices-demo/release/ ⇒ Kubernetes Manifest File
-
-## Create Node Group
-Create a Kubernetes cluster with three nodes as "n1", "n2", "n3".
-
-### If Nodes are not Healthy
-Step 1: Check CNI Add-on
-
+## Kubernetes Core Concepts
 ```
-aws eks list-addons --cluster-name test1
+Cluster
+└── Node (Real computer – EC2 Instance / VM)
+    └── Pod (Smallest deployable unit in Kubernetes)
+        └── Container(s)
 ```
 
-If vpc-cni missing, install:
+- **Container** → Packaged application + dependencies  
+- **Pod** → One or more containers that always run together (smallest unit)  
+- **Node** → Physical or virtual machine (EC2 instance)  
+- **Cluster** → Group of nodes managed by Kubernetes control plane  
 
+Pod is the smallest unit of Kubernetes. One Pod can have multiple containers.
+
+## What is Istio & Why Use It in DevOps?
+**Istio** is an open-source **Service Mesh** that acts as a dedicated communication layer between microservices.
+
+### Why Istio?
+- Secure service-to-service communication (mTLS)  
+- Advanced traffic control (routing, retries, timeouts, canary)  
+- Deep observability without changing application code  
+- Centralized policy enforcement  
+
+### How Istio Works – Sidecar Proxy Pattern
+- No code changes required  
+- Enable sidecar injection: `kubectl label namespace default istio-injection=enabled`  
+- Istio automatically injects an **Envoy proxy container** as a **sidecar** into every pod  
+- Pod becomes: `[Application Container] + [Istio Sidecar Proxy]`  
+- All inbound/outbound traffic flows through the sidecar  
+- Sidecar collects metrics, enforces policies, encrypts traffic  
+
+```bash
+kubectl get pods
+# Shows READY 2/2 → Application container + Sidecar proxy
 ```
-aws eks create-addon --cluster-name test1 --addon-name vpc-cni --addon-version v1.18.2-eksbuild.1 --resolve-conflicts OVERWRITE
+
+## Step-by-Step Implementation
+
+### 1. Create EKS Cluster + Node Group
+- Create Kubernetes cluster (AWS EKS)  
+- Create one node group with 3 nodes (n1, n2, n3)
+
+### 2. Management EC2 Instance Setup
+```bash
+# Create EC2 instance
+# Install tools
+sudo apt install -y aws-cli kubectl
+
+# Configure AWS credentials
+aws configure
 ```
 
-One node group creates and manages three nodes.
+### 3. Connect to EKS Cluster
+```bash
+aws eks update-kubeconfig --region us-east-1 --name my_cluster
+# Reason: Updates ~/.kube/config so kubectl can talk to your EKS cluster
+```
 
-### 1. Node
-- Worker Node: Actual server (physical or AWS EC2 instance).
-- Pods run on Nodes.
+```bash
+kubectl get nodes
+# Reason: Verify you can see the 3 worker nodes
+```
+
+### 4. Install Istio (Using Official Documentation)
+```bash
+curl -L https://istio.io/downloadIstio | sh -
+cd istio-*
+export PATH=$PWD/bin:$PATH
+istioctl install --set profile=demo -y
+# Reason: Installs Istio control plane with demo profile (includes add-ons)
+```
+
+### 5. Enable Automatic Sidecar Injection
+```bash
+kubectl label namespace default istio-injection=enabled --overwrite
+# Reason: All new pods in default namespace will get Istio sidecar injected
+```
+
+### 6. Deploy the Microservices Demo Application
+```bash
+git clone https://github.com/DinukaSanjana/microservices-demo.git
+cd microservices-demo/release
+kubectl apply -f kubernetes-manifests.yaml
+# Reason: Deploys all 10+ microservices + frontend
+```
+
+```bash
+kubectl get pods
+# After restart → shows 2/2 containers (app + sidecar)
+```
+
+```bash
+kubectl get svc
+# Copy frontend-external LoadBalancer URL → Open in browser
+# Reason: Test the e-commerce app is working
+```
+
+### 7. Install Observability Add-ons (Kiali, Prometheus, Grafana, Jaeger)
+```bash
+cd ~/istio-*/samples/addons
+kubectl apply -f .
+# Reason: Deploys Kiali, Prometheus, Grafana, Jaeger in istio-system namespace
+```
+
+```bash
+kubectl get pods -n istio-system
+# Reason: Verify add-ons are running
+```
+
+### 8. Expose Kiali Dashboard
+```bash
+kubectl patch svc kiali -n istio-system -p '{"spec":{"type":"LoadBalancer"}}'
+# Reason: Changes Kiali service type to LoadBalancer → gets public URL
+```
+
+→ Open Kiali LoadBalancer URL : `20001` → See full service mesh graph
+
+### 9. Expose Prometheus
+```bash
+kubectl edit svc prometheus -n istio-system
+# Change type: ClusterIP → NodePort
+# Save & quit
+```
+
+```bash
+kubectl get svc -n istio-system
+# Look for prometheus → shows port like 9090:32XXX
+```
+
+→ Open any worker node public IP : `32XXX` → Prometheus UI
+
+**Security Group Rule** (on EKS worker nodes SG):  
+Allow Custom TCP → Port `32XXX` → Source: Anywhere
+
+### 10. Expose Grafana
+```bash
+kubectl edit svc grafana -n istio-system
+# Change type: ClusterIP → NodePort
+# Save & quit
+```
+
+```bash
+kubectl get svc -n istio-system
+# Look for grafana → shows port like 3000:32YYY
+```
+
+→ Open any worker node public IP : `32YYY` → Grafana (default login: admin / admin)
+
+**Security Group Rule**: Allow Custom TCP → Grafana NodePort → Anywhere
+
+## Summary – What You Achieve
+- Running production-grade microservices on EKS  
+- Zero code changes with full Istio service mesh  
+- Automatic mTLS, traffic management, and observability  
+- Visual service mesh with Kiali  
+- Metrics with Prometheus  
+- Beautiful dashboards with Grafana  
+
+**Project Outcome**: A fully observable, secure, and resilient microservices architecture using Kubernetes + Istio.
